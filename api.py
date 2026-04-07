@@ -49,7 +49,7 @@ LFS_POINTER_PREFIX = b"version https://git-lfs"
 def _is_lfs_pointer(path: Path) -> bool:
     try:
         with open(path, "rb") as f:
-            return f.read(25) == LFS_POINTER_PREFIX
+            return f.read(len(LFS_POINTER_PREFIX)) == LFS_POINTER_PREFIX
     except Exception:
         return False
 
@@ -57,12 +57,17 @@ def _ensure_models() -> None:
     (BASE_DIR / "models").mkdir(exist_ok=True)
     for rel in MODEL_FILES:
         dest = BASE_DIR / rel
-        if not dest.exists() or _is_lfs_pointer(dest):
+        is_pointer = _is_lfs_pointer(dest) if dest.exists() else False
+        print(f"[startup] {dest.name}: exists={dest.exists()}, lfs_pointer={is_pointer}")
+        if not dest.exists() or is_pointer:
             filename = Path(rel).name
             url = f"{RELEASE_BASE}/{filename}"
-            print(f"[startup] downloading {filename} from GitHub Release…")
-            urllib.request.urlretrieve(url, dest)
-            print(f"[startup] {filename} saved ({dest.stat().st_size / 1e6:.1f} MB)")
+            print(f"[startup] downloading {filename} from {url}")
+            try:
+                urllib.request.urlretrieve(url, dest)
+                print(f"[startup] {filename} saved ({dest.stat().st_size / 1e6:.1f} MB)")
+            except Exception as e:
+                raise RuntimeError(f"Failed to download {filename}: {e}") from e
 
 # ---------------------------------------------------------------------------
 # Global state (populated at startup)
