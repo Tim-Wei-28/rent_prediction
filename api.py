@@ -16,6 +16,7 @@ Run locally:
 from __future__ import annotations
 
 import re
+import urllib.request
 from pathlib import Path
 from typing import List, Optional
 
@@ -31,6 +32,37 @@ from sklearn.neighbors import NearestNeighbors
 # Paths
 # ---------------------------------------------------------------------------
 BASE_DIR = Path(__file__).parent
+
+# ---------------------------------------------------------------------------
+# Model download (runs if LFS pointers were cloned instead of real binaries)
+# ---------------------------------------------------------------------------
+RELEASE_BASE = "https://github.com/Tim-Wei-28/rent_prediction/releases/download/v1.0.0"
+MODEL_FILES = [
+    "models/model_lgb.pkl",
+    "models/model_xgb.pkl",
+    "models/model_cat.pkl",
+    "models/model_meta.pkl",
+    "models/encoding.pkl",
+]
+LFS_POINTER_PREFIX = b"version https://git-lfs"
+
+def _is_lfs_pointer(path: Path) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(25) == LFS_POINTER_PREFIX
+    except Exception:
+        return False
+
+def _ensure_models() -> None:
+    (BASE_DIR / "models").mkdir(exist_ok=True)
+    for rel in MODEL_FILES:
+        dest = BASE_DIR / rel
+        if not dest.exists() or _is_lfs_pointer(dest):
+            filename = Path(rel).name
+            url = f"{RELEASE_BASE}/{filename}"
+            print(f"[startup] downloading {filename} from GitHub Release…")
+            urllib.request.urlretrieve(url, dest)
+            print(f"[startup] {filename} saved ({dest.stat().st_size / 1e6:.1f} MB)")
 
 # ---------------------------------------------------------------------------
 # Global state (populated at startup)
@@ -66,6 +98,8 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event() -> None:
     global _models, _enc, _postcodes_df, _station_coords
+
+    _ensure_models()
 
     models_dir = BASE_DIR / "models"
     _models["lgb"]  = joblib.load(models_dir / "model_lgb.pkl")
