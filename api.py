@@ -43,6 +43,7 @@ MODEL_FILES = [
     "models/model_cat.pkl",
     "models/model_meta.pkl",
     "models/encoding.pkl",
+    "london_postcodes.csv",
 ]
 LFS_POINTER_PREFIX = b"version https://git-lfs"
 
