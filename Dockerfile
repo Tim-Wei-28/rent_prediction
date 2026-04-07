@@ -9,4 +9,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port $PORT"]
+CMD ["python", "start.py"]
