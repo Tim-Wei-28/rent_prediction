@@ -280,7 +280,16 @@ def _build_features(inp: PropertyInput) -> pd.DataFrame:
         "latitude":            lat,
         "longitude":           lon,
     }
-    return pd.DataFrame([row])[enc["features"]]
+    df = pd.DataFrame([row])[enc["features"]]
+    # Cast categorical columns to match training dtypes
+    for col in df.columns:
+        if df[col].dtype == object or col == "property_type_clean":
+            categories = enc.get("cat_categories", {}).get(col, None)
+            if categories is not None:
+                df[col] = pd.Categorical(df[col], categories=categories)
+            else:
+                df[col] = df[col].astype("category")
+    return df
 
 
 def _confidence_label(pct: float) -> str:
