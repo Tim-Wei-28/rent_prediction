@@ -277,6 +277,8 @@ def _build_features(inp: PropertyInput) -> pd.DataFrame:
         "subdistrict_enc":     subdistrict_enc,
         "tube_dist_km":        tube_dist_km,
         "knn_rent_mean":       knn_rent_mean,
+        "latitude":            lat,
+        "longitude":           lon,
     }
     return pd.DataFrame([row])[enc["features"]]
 
