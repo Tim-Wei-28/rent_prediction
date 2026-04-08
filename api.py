@@ -173,6 +173,7 @@ class RentPrediction(BaseModel):
     )
     confidence_label: str = Field(description="High / Moderate / Low")
     subdistrict: str = Field(description="Resolved postcode district, e.g. SW1A")
+    area_avg_gbp: int = Field(description="Mean rent of 20 nearest properties in the area (£/month)")
 
 
 # ---------------------------------------------------------------------------
@@ -217,8 +218,8 @@ def _min_tube_dist_km(lat: float, lon: float) -> float:
     return float((6371 * 2 * np.arcsin(np.sqrt(a))).min())
 
 
-def _knn_rent_mean(lat: float, lon: float) -> float:
-    k = _enc["knn_k"]
+def _knn_rent_mean(lat: float, lon: float, k: int | None = None) -> float:
+    k = k or _enc["knn_k"]
     ref_lat = _enc["knn_train_lat"]
     ref_lon = _enc["knn_train_lon"]
     ref_y   = _enc["knn_train_y_log"]
@@ -326,7 +327,9 @@ def predict(inp: PropertyInput) -> RentPrediction:
     p_std = float(np.std([p_lgb, p_xgb, p_cat]))
     confidence_pct = round(p_std / p_avg * 100, 1)
 
-    _, _, subdistrict = _resolve_postcode(inp.zip_code)
+    lat, lon, subdistrict = _resolve_postcode(inp.zip_code)
+    area_avg_log = _knn_rent_mean(lat, lon, k=20)
+    area_avg_gbp = int(round(np.exp(area_avg_log)))
 
     return RentPrediction(
         predicted_rent_gbp=round(p_avg),
@@ -335,6 +338,7 @@ def predict(inp: PropertyInput) -> RentPrediction:
         confidence_pct=confidence_pct,
         confidence_label=_confidence_label(confidence_pct),
         subdistrict=subdistrict,
+        area_avg_gbp=area_avg_gbp,
     )
 
 
